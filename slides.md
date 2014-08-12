@@ -11,7 +11,7 @@
 
 
 ---
-# I :heart: Ruby, Rails, <br/> and TDD
+# I :heart: Ruby, Rails, and TDD
 
 ---
 # Scaling Dev Teams
