@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+
+<title>Slides</title>
+
+<meta name="description" content="A framework for easily creating beautiful presentations using HTML">
+<meta name="author" content="">
+
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+<link rel="stylesheet" href="css/reveal.min.css">
+<link rel="stylesheet" href="css/theme/default.css" id="theme">
+
+<!-- For syntax highlighting -->
+<link rel="stylesheet" href="lib/css/zenburn.css">
+
+<link rel="stylesheet" href="css/reveal-ck.css">
+
+
+<!-- If the query includes 'print-pdf', use the PDF print sheet -->
+<script>
+  document.write( '<link rel="stylesheet" href="css/print/' + ( window.location.search.match( /print-pdf/gi ) ? 'pdf' : 'paper' ) + '.css" type="text/css" media="print">' );
+</script>
+
+<!--[if lt IE 9]>
+<script src="lib/js/html5shiv.js"></script>
+<![endif]-->
+
+  </head>
+
+  <body>
+    <div class="reveal">
+  <!-- Any section element inside of this container is displayed as a slide -->
+  <div class="slides">
+    <section>
+<h1>Don't Let SOA Get In Your Way</h1>
+
+<h2>BostonRB - August 2014</h2>
+
+</section>
+<section>
+
+<p><a href="https://github.com/christopherslee" class="user-mention">@christopherslee</a></p>
+
+<ul>
+<li>Technical Co-Founder of MobManager.com (acquired)</li>
+<li>Team Lead/Rails Best Practice Lead at Constant Contact</li>
+<li>Lead Engineer at Jana Mobile (python, we're hiring!)</li>
+</ul>
+
+</section>
+<section>
+
+<h1>I <img class="emoji" title=":heart:" alt=":heart:" src="https://assets-cdn.github.com/images/icons/emoji/heart.png" align="absmiddle"> Ruby, Rails, <br> and TDD</h1>
+
+</section>
+<section>
+
+<h1>Scaling Dev Teams</h1>
+
+<ul>
+<li>Service Oriented Architecture</li>
+<li>Microservices Architecture</li>
+</ul>
+
+</section>
+<section>
+
+<h1>Challenges</h1>
+
+<ul>
+<li>Can't work without internet/VPN/services running</li>
+<li>Complicated Testing (Unit/Integration)</li>
+</ul>
+
+<p><img class="emoji" title=":expressionless:" alt=":expressionless:" src="https://assets-cdn.github.com/images/icons/emoji/expressionless.png" align="absmiddle"></p>
+
+</section>
+<section>
+
+<h1>Account Service</h1>
+<pre><code class="code">GET - http://accounts.yourenterprise.com/v1/accounts
+GET - http://accounts.yourenterprise.com/v1/accounts/123
+POST - http://accounts.yourenterprise.com/v1/accounts
+PUT - http://accounts.yourenterprise.com/v1/accounts/123
+DELETE - http://accounts.yourenterprise.com/v1/accounts/123
+
+# Application Configuration
+AppConfig[:account_service_url] = 'http://accounts.yourenterprise.com/'
+</code></pre>
+</section>
+<section>
+
+<h1>Sinatra Stub Server</h1>
+<pre><code class="code">require 'sinatra'
+require 'sinatra/json'
+
+get '/v1/accounts/' do
+  json accounts: [{ id: 123, first: 'Chris' }]
+end
+
+get '/v1/accounts/:id' do
+  json account: { id: params[:id], first: 'Chris' }
+end
+</code></pre>
+<pre><code class="code"># Remove remote dependency!
+AppConfig[:account_service_url] = 'http://localhost:9000/'
+</code></pre>
+</section>
+<section>
+
+<h1>I <img class="emoji" title=":rage:" alt=":rage:" src="https://assets-cdn.github.com/images/icons/emoji/rage.png" align="absmiddle"> TDD</h1>
+<pre><code class="code"># simple test gone complicated
+it "shows the widget to the user" do
+  AccountAPI.to_receive(:get).and_return({ id: 123, first: 'Chris' })
+  ContactsAPI.to_receive(:get).and_return({ ... })
+  ConfigiAPI.to_receive(:get).and_return({ ... })
+  OtherAPI.to_receive(:get).and_return({ ... })
+
+  # All I really wanted to do is test this part
+  user = FactoryGirl.create(:user)
+  FactoryGirl.create(:widget, user: user)
+  get :index, {}, { user_id: user.id }
+  response.should be_success
+end
+</code></pre>
+</section>
+<section>
+
+<h1>WebMock</h1>
+<pre><code class="code">it "shows the widget to the user" do
+  stub_request(:get, 'http://accounts.yourenterprise.com/v1/accounts/123').
+    to_return(status: 200, body: { id: 123, first: 'Chris' })
+  stub_request(:get, 'http://contacts.yourenterprise.com/v1/contacts/123').
+    to_return(status: 200, body: { ... })
+  stub_request(:get, 'http://config.yourenterprise.com/v1/config/123').
+    to_return(status: 200, body: { ... })
+  stub_request(:get, 'http://other.yourenterprise.com/v1/other/123').
+    to_return(status: 200, body: { ... })
+
+  user = FactoryGirl.create(:user)
+  FactoryGirl.create(:widget, user: user)
+  get :index, {}, { user_id: user.id }
+  expect(response).to be_success
+end
+</code></pre>
+<ul>
+<li>Better tests, less implementation specific</li>
+</ul>
+
+</section>
+<section>
+
+<h1>Even Better?</h1>
+<pre><code class="code"># spec_helper.rb, set up results as default
+stub_request(:get, 'http://accounts.yourenterprise.com/v1/accounts/123').
+  to_return(status: 200, body: { id: 123, first: 'Chris' })
+stub_request(:get, 'http://contacts.yourenterprise.com/v1/contacts/123').
+  to_return(status: 200, body: { ... })
+stub_request(:get, 'http://config.yourenterprise.com/v1/config/123').
+  to_return(status: 200, body: { ... })
+stub_request(:get, 'http://other.yourenterprise.com/v1/other/123').
+  to_return(status: 200, body: { ... })
+
+it "shows the widget to the user" do
+  user = FactoryGirl.create(:user)
+  FactoryGirl.create(:widget, user: user)
+  get :index, {}, { user_id: user.id }
+  expect(response).to be_success
+end
+</code></pre>
+<ul>
+<li>Get to the point in your tests</li>
+<li>Mock ruby objects for variations</li>
+<li>You need sensible defaults</li>
+</ul>
+
+</section>
+<section>
+
+<h1>Mock Non-Default Behavior</h1>
+<pre><code class="code">it "redirects to login when the account is not found" do
+  AccountService.to_receive(:get_user).and_raise(UserNotFoundError)
+  get :index, {}, { user_id: 'bogusid' }
+  expect(response).to be_redirect
+end
+</code></pre>
+<ul>
+<li>Domain specific service wrappers around client API</li>
+<li>Assumes good testing from app, to wrapper, to client</li>
+</ul>
+
+</section>
+<section>
+
+<h1>WebMock in Runtime?!?</h1>
+<pre><code class="code"># /config/initializers/mock_services.rb
+if Rails.env != 'production' and ENV['USE_STUBS'] != 'off'
+  stub_request(:get, 'http://accounts.yourenterprise.com/v1/accounts/123').
+    to_return(status: 200, body: { id: 123, first: 'Chris' })
+end
+
+# start up with mocks
+$&gt; rails server
+# start up without mocks
+$&gt; rails server USE_STUBS=off
+# using a rack env
+$&gt; rails server RACK_ENV=local
+</code></pre>
+<ul>
+<li>No more Sinatra process</li>
+<li>WebMocks work great for Cucumber/Selenium Tests</li>
+<li>Downside: development runtime configuration options, document them in the README</li>
+</ul>
+
+</section>
+<section>
+
+<h1>Results</h1>
+
+<ul>
+<li>New App from inception to production in 2 months (previous best 9 months)</li>
+<li>98% unit test code coverage (rails models, controllers)</li>
+<li>80% cucumber coverage</li>
+<li>Developer Happiness</li>
+</ul>
+
+<h1><img class="emoji" title=":relaxed:" alt=":relaxed:" src="https://assets-cdn.github.com/images/icons/emoji/relaxed.png" align="absmiddle"></h1>
+
+</section>
+<section>
+
+<h1>Thank you</h1>
+
+<p><small><code>http://github.com/christopherslee/dont_let_soa_get_in_your_way</code></small></p>
+
+<p><img class="emoji" title=":octopus:" alt=":octopus:" src="https://assets-cdn.github.com/images/icons/emoji/octopus.png" align="absmiddle"></p>
+
+<p><br>
+<small><em>made with <a href="http://jedcn.github.io/reveal-ck">reveal-ck</a></em></small></p>
+
+</section>
+
+  </div>
+</div>
+
+<script src="lib/js/head.min.js"></script>
+<script src="js/reveal.min.js"></script>
+
+<script>
+  (function() {
+  function extend( a, b ) {
+    for(var i in b) {
+      a[i] = b[i];
+    }
+  }
+  var baseOptions = {
+    transition: 'default',
+    dependencies: [
+      { src: 'lib/js/classList.js', condition: function() { return !document.body.classList; } },
+      { src: 'plugin/markdown/marked.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+      { src: 'plugin/markdown/markdown.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+      { src: 'plugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } },
+      { src: 'plugin/zoom-js/zoom.js', async: true, condition: function() { return !!document.body.classList; } },
+      { src: 'plugin/notes/notes.js', async: true, condition: function() { return !!document.body.classList; } }
+    ]
+  };
+  var configOptions = {"controls":true,"progress":true,"history":true,"center":true}
+  var initializeOptions = {};
+  extend(initializeOptions, baseOptions);
+  extend(initializeOptions, configOptions);
+  Reveal.initialize(initializeOptions);
+})();
+
+</script>
+
+  </body>
+</html>
